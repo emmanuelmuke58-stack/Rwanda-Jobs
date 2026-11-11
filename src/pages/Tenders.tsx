@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Search, MapPin, FileText, ChevronRight, Filter, Clock, Building2, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
+import { TenderCardSkeleton } from '../components/ui/LoadingSkeletons.tsx';
 
 export default function Tenders() {
   const [tenders, setTenders] = useState<any[]>([]);
@@ -11,7 +12,7 @@ export default function Tenders() {
       try {
         const res = await fetch('/api/tenders');
         const data = await res.json();
-        setTenders(data);
+        setTenders(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Failed to fetch tenders:', error);
       } finally {
@@ -41,13 +42,13 @@ export default function Tenders() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {loading ? (
-            [1, 2, 3, 4].map(i => <div key={i} className="h-48 bg-white rounded-3xl animate-pulse" />)
+            [1, 2, 3, 4].map(i => <TenderCardSkeleton key={i} />)
           ) : tenders.length > 0 ? (
             tenders.map((tender) => (
               <div key={tender.id} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                 <div className="flex justify-between items-start mb-6">
-                  <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full">{tender.category}</span>
-                  <span className="text-xs text-gray-400">Ref: {tender.referenceNumber}</span>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full">Notice</span>
+                  <span className="text-xs text-gray-400">Ref: {tender.referenceNumber || 'N/A'}</span>
                 </div>
                 <h3 className="text-xl font-bold text-[#0F172A] group-hover:text-[#2563EB] transition-colors mb-2">{tender.title}</h3>
                 <p className="text-gray-500 mb-8 flex items-center gap-2">
@@ -57,7 +58,7 @@ export default function Tenders() {
                 
                 <div className="pt-6 border-t border-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div className="flex items-center gap-2 text-sm">
-                    <Clock size={16} className="text-red-400" />
+                    <Clock size={16} className={new Date(tender.deadline) < new Date() ? 'text-red-400' : 'text-gray-400'} />
                     <span className="text-gray-400">Deadline:</span>
                     <span className="font-bold text-red-500">{format(new Date(tender.deadline), 'MMM dd, yyyy')}</span>
                   </div>

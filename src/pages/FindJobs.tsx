@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Search, MapPin, Briefcase, ChevronRight, Filter, X, SlidersHorizontal, GraduationCap, Clock, Building2 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
+import { JobListItemSkeleton } from '../components/ui/LoadingSkeletons.tsx';
 
 export default function FindJobs() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -9,9 +10,31 @@ export default function FindJobs() {
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  const categories = ['Administration', 'Accounting & Finance', 'Engineering', 'Information Tech', 'Healthcare', 'Education', 'Agriculture', 'Security', 'NGO', 'Government', 'Private'];
-  const types = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Temporary', 'Volunteer'];
-  const levels = ['Primary', 'Secondary / A2', 'Diploma / A1', 'Bachelor\'s Degree', 'Master\'s Degree', 'PhD'];
+  const [categories, setCategories] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [employmentTypes, setEmploymentTypes] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const [catsRes, locsRes, typesRes] = await Promise.all([
+          fetch('/api/categories?type=job_category'),
+          fetch('/api/categories?type=location'),
+          fetch('/api/categories?type=employment_type')
+        ]);
+        const catsData = await catsRes.json();
+        const locsData = await locsRes.json();
+        const typesData = await typesRes.json();
+        
+        setCategories(Array.isArray(catsData) ? catsData : []);
+        setLocations(Array.isArray(locsData) ? locsData : []);
+        setEmploymentTypes(Array.isArray(typesData) ? typesData : []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchFilters();
+  }, []);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -20,7 +43,7 @@ export default function FindJobs() {
         const query = new URLSearchParams(searchParams).toString();
         const res = await fetch(`/api/jobs?${query}`);
         const data = await res.json();
-        setJobs(data);
+        setJobs(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Failed to fetch jobs:', error);
       } finally {
@@ -68,15 +91,18 @@ export default function FindJobs() {
 
             <div>
               <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider mb-4">Location</h3>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="District or city"
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  value={searchParams.get('location') || ''}
-                  onChange={(e) => updateParam('location', e.target.value)}
-                />
+              <div className="space-y-2">
+                {locations.map(loc => (
+                  <label key={loc.id} className="flex items-center gap-2 group cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={searchParams.get('locationId') === loc.id.toString()}
+                      onChange={() => updateParam('locationId', searchParams.get('locationId') === loc.id.toString() ? '' : loc.id.toString())}
+                    />
+                    <span className="text-sm text-gray-600 group-hover:text-blue-600 transition-colors">{loc.name}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -84,14 +110,14 @@ export default function FindJobs() {
               <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider mb-4">Category</h3>
               <div className="space-y-2">
                 {categories.map(cat => (
-                  <label key={cat} className="flex items-center gap-2 group cursor-pointer">
+                  <label key={cat.id} className="flex items-center gap-2 group cursor-pointer">
                     <input 
                       type="checkbox" 
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      checked={searchParams.get('category') === cat}
-                      onChange={() => updateParam('category', searchParams.get('category') === cat ? '' : cat)}
+                      checked={searchParams.get('categoryId') === cat.id.toString()}
+                      onChange={() => updateParam('categoryId', searchParams.get('categoryId') === cat.id.toString() ? '' : cat.id.toString())}
                     />
-                    <span className="text-sm text-gray-600 group-hover:text-blue-600 transition-colors">{cat}</span>
+                    <span className="text-sm text-gray-600 group-hover:text-blue-600 transition-colors">{cat.name}</span>
                   </label>
                 ))}
               </div>
@@ -100,15 +126,15 @@ export default function FindJobs() {
             <div>
               <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider mb-4">Employment Type</h3>
               <div className="space-y-2">
-                {types.map(type => (
-                  <label key={type} className="flex items-center gap-2 group cursor-pointer">
+                {employmentTypes.map(type => (
+                  <label key={type.id} className="flex items-center gap-2 group cursor-pointer">
                     <input 
                       type="checkbox" 
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      checked={searchParams.get('type') === type}
-                      onChange={() => updateParam('type', searchParams.get('type') === type ? '' : type)}
+                      checked={searchParams.get('typeId') === type.id.toString()}
+                      onChange={() => updateParam('typeId', searchParams.get('typeId') === type.id.toString() ? '' : type.id.toString())}
                     />
-                    <span className="text-sm text-gray-600 group-hover:text-blue-600 transition-colors">{type}</span>
+                    <span className="text-sm text-gray-600 group-hover:text-blue-600 transition-colors">{type.name}</span>
                   </label>
                 ))}
               </div>
@@ -135,14 +161,6 @@ export default function FindJobs() {
             >
               <SlidersHorizontal size={16} /> Filters
             </button>
-            <div className="hidden lg:flex items-center gap-2 text-sm text-gray-500">
-              Sort by: 
-              <select className="border-none bg-transparent font-bold text-[#0F172A] focus:ring-0 outline-none cursor-pointer">
-                <option>Newest First</option>
-                <option>Oldest First</option>
-                <option>Closing Soon</option>
-              </select>
-            </div>
           </div>
 
           <div className="space-y-4">
@@ -150,7 +168,7 @@ export default function FindJobs() {
               [1, 2, 3, 4, 5].map(i => <JobListItemSkeleton key={i} />)
             ) : jobs.length > 0 ? (
               jobs.map((item) => (
-                <JobListItem key={item.jobs.id} job={item.jobs} company={item.companies} />
+                <JobListItem key={item.job.id} job={item.job} company={item.company} category={item.category} location={item.location_name} type={item.type_name} />
               ))
             ) : (
               <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
@@ -169,7 +187,7 @@ export default function FindJobs() {
   );
 }
 
-function JobListItem({ job, company }: any) {
+function JobListItem({ job, company, category, location, type }: any) {
   return (
     <Link to={`/jobs/${job.id}`} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group flex flex-col md:flex-row gap-6">
       <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center overflow-hidden border border-gray-50 shrink-0">
@@ -187,22 +205,18 @@ function JobListItem({ job, company }: any) {
             <div className="flex items-center gap-2 mt-1">
               <span className="text-sm font-semibold text-gray-700">{company.name}</span>
               <span className="text-gray-300">·</span>
-              <span className="text-xs text-gray-500">{job.category}</span>
+              <span className="text-xs text-gray-500">{category.name}</span>
             </div>
           </div>
           <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full">
-            {job.employmentType}
+            {type}
           </span>
         </div>
         
         <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500">
           <div className="flex items-center gap-1.5">
             <MapPin size={16} className="text-gray-400" />
-            {job.location}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <GraduationCap size={16} className="text-gray-400" />
-            {job.educationLevel}
+            {location}
           </div>
           <div className="flex items-center gap-1.5">
             <Clock size={16} className="text-gray-400" />
@@ -223,20 +237,3 @@ function JobListItem({ job, company }: any) {
   );
 }
 
-function JobListItemSkeleton() {
-  return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm animate-pulse flex flex-col md:flex-row gap-6">
-      <div className="w-16 h-16 bg-gray-100 rounded-xl shrink-0" />
-      <div className="flex-1 space-y-4">
-        <div className="h-6 bg-gray-100 rounded w-3/4" />
-        <div className="h-4 bg-gray-100 rounded w-1/4" />
-        <div className="flex gap-4">
-          <div className="h-4 bg-gray-100 rounded w-24" />
-          <div className="h-4 bg-gray-100 rounded w-24" />
-          <div className="h-4 bg-gray-100 rounded w-24" />
-        </div>
-      </div>
-      <div className="w-32 h-10 bg-gray-100 rounded-xl self-end" />
-    </div>
-  );
-}

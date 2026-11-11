@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Briefcase, FileText, Bell, Building2, Info, Phone, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../../App.tsx';
+import { useSettings } from '../../lib/settings.tsx';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const { user } = useAuth();
+  const { settings } = useSettings();
 
   const navLinks = [
     { name: 'Home', path: '/', icon: null },
@@ -29,11 +31,14 @@ export default function Navbar() {
         <div className="flex justify-between h-20">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="w-10 h-10 bg-[#2563EB] rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg group-hover:bg-[#1D4ED8] transition-colors">
-                RJ
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg transition-colors"
+                style={{ backgroundColor: settings.primary_color }}
+              >
+                {settings.site_title[0]}
               </div>
               <span className="text-xl font-bold tracking-tight text-[#0F172A] whitespace-nowrap">
-                Rwanda Jobs
+                {settings.site_title}
               </span>
             </Link>
 

@@ -1,84 +1,115 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../../db/index.ts';
-import { jobs, companies } from '../../db/schema.ts';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../App.tsx';
 import { auth } from '../../lib/firebase.ts';
 import { signOut } from 'firebase/auth';
-import { LayoutDashboard, Plus, Briefcase, FileText, Bell, Building2, LogOut, Search, MoreVertical, Edit2, Trash2, CheckCircle2, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { 
+  LayoutDashboard, Briefcase, FileText, Bell, Building2, LogOut, 
+  Settings, Shield, PieChart, Layers, Users, Globe, Image as ImageIcon,
+  Activity, HelpCircle, ChevronRight, Menu, X, Search, BellRing
+} from 'lucide-react';
+
+// Sub-pages (We'll create these next)
+import AdminOverview from './Overview.tsx';
+import JobManagement from './JobManagement.tsx';
+import CategoryManagement from './CategoryManagement.tsx';
+import WebsiteSettings from './WebsiteSettings.tsx';
+import TenderManagement from './TenderManagement.tsx';
+import AnnouncementManagement from './AnnouncementManagement.tsx';
+import CompanyManagement from './CompanyManagement.tsx';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'jobs' | 'tenders' | 'announcements' | 'companies'>('jobs');
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/${activeTab === 'jobs' ? 'jobs' : activeTab}`);
-      const result = await res.json();
-      setData(result);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+  const menuGroups = [
+    {
+      label: 'Main',
+      items: [
+        { id: 'overview', name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+        { id: 'analytics', name: 'Analytics', path: '/admin/analytics', icon: PieChart },
+        { id: 'logs', name: 'Activity Logs', path: '/admin/logs', icon: Activity },
+      ]
+    },
+    {
+      label: 'Opportunities',
+      items: [
+        { id: 'jobs', name: 'Job Listings', path: '/admin/jobs', icon: Briefcase },
+        { id: 'tenders', name: 'Tender Notices', path: '/admin/tenders', icon: FileText },
+        { id: 'announcements', name: 'Announcements', path: '/admin/announcements', icon: Bell },
+      ]
+    },
+    {
+      label: 'Entities',
+      items: [
+        { id: 'companies', name: 'Companies', path: '/admin/companies', icon: Building2 },
+        { id: 'categories', name: 'Categories', path: '/admin/categories', icon: Layers },
+      ]
+    },
+    {
+      label: 'Management',
+      items: [
+        { id: 'content', name: 'Pages & Content', path: '/admin/content', icon: Globe },
+        { id: 'media', name: 'Media Library', path: '/admin/media', icon: ImageIcon },
+        { id: 'settings', name: 'Website Settings', path: '/admin/settings', icon: Settings },
+        { id: 'security', name: 'Security & Users', path: '/admin/security', icon: Shield },
+      ]
     }
-  };
+  ];
 
   const handleLogout = () => {
     signOut(auth);
+    navigate('/admin/login');
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       {/* Sidebar */}
-      <aside className="w-72 bg-[#0F172A] text-white flex flex-col sticky top-0 h-screen">
-        <div className="p-8 border-b border-white/5 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg">RJ</div>
-          <span className="font-bold tracking-tight text-lg">Admin Console</span>
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-20'} bg-[#0F172A] text-white flex flex-col sticky top-0 h-screen transition-all duration-300 z-50`}>
+        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+          <div className={`flex items-center gap-3 ${!isSidebarOpen && 'hidden'}`}>
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg">RJ</div>
+            <span className="font-bold tracking-tight text-lg">Admin CMS</span>
+          </div>
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
 
-        <nav className="flex-1 p-6 space-y-2">
-          <button 
-            onClick={() => setActiveTab('jobs')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'jobs' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-          >
-            <Briefcase size={20} />
-            <span className="font-medium">Job Listings</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('tenders')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'tenders' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-          >
-            <FileText size={20} />
-            <span className="font-medium">Tenders</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('announcements')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'announcements' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-          >
-            <Bell size={20} />
-            <span className="font-medium">Announcements</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('companies')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'companies' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-          >
-            <Building2 size={20} />
-            <span className="font-medium">Companies</span>
-          </button>
+        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8 custom-scrollbar">
+          {menuGroups.map((group) => (
+            <div key={group.label}>
+              <h3 className={`text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-4 px-2 ${!isSidebarOpen && 'hidden'}`}>
+                {group.label}
+              </h3>
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <Link 
+                    key={item.id}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
+                      isActive(item.path) 
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <item.icon size={20} className={isActive(item.path) ? 'text-white' : 'text-gray-500 group-hover:text-white'} />
+                    <span className={`font-medium ${!isSidebarOpen && 'hidden'}`}>{item.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        <div className="p-6 border-t border-white/5">
-          <div className="flex items-center gap-3 mb-6 p-2 rounded-xl bg-white/5">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-xs font-bold uppercase overflow-hidden">
-              {user?.photoURL ? <img src={user.photoURL} alt="" /> : user?.email?.[0]}
+        <div className="p-4 border-t border-white/5">
+          <div className={`flex items-center gap-3 mb-4 p-2 rounded-xl bg-white/5 ${!isSidebarOpen && 'hidden'}`}>
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-xs font-bold uppercase">
+              {user?.email?.[0]}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold truncate">{user?.email}</p>
@@ -87,143 +118,69 @@ export default function AdminDashboard() {
           </div>
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-red-400 hover:text-red-300 transition-colors"
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/5 rounded-xl transition-colors ${!isSidebarOpen && 'justify-center'}`}
           >
-            <LogOut size={16} /> Logout
+            <LogOut size={20} />
+            <span className={!isSidebarOpen ? 'hidden' : ''}>Sign Out</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-10 overflow-y-auto">
-        <div className="max-w-7xl mx-auto space-y-10">
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="space-y-1">
-              <h1 className="text-3xl font-extrabold tracking-tight capitalize">{activeTab} Management</h1>
-              <p className="text-gray-500">Create, edit, and manage all your platform data in one place.</p>
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="relative max-w-md w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Global search..."
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+              />
             </div>
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="px-6 py-3 bg-[#2563EB] text-white font-bold rounded-xl hover:bg-[#1D4ED8] transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
-            >
-              <Plus size={20} /> Add New {activeTab.slice(0, -1)}
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <button className="p-2 text-gray-400 hover:text-gray-600 relative">
+              <BellRing size={20} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-          </header>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatsCard title={`Total ${activeTab}`} value={data.length} icon={Briefcase} color="blue" />
-            <StatsCard title={`Active ${activeTab}`} value={data.length} icon={CheckCircle2} color="green" />
-            <StatsCard title={`Pending Action`} value={0} icon={XCircle} color="amber" />
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input 
-                  type="text" 
-                  placeholder={`Search ${activeTab}...`}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+            <div className="h-8 w-[1px] bg-gray-200 mx-2"></div>
+            <button className="flex items-center gap-2 group">
+              <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-blue-600 font-bold">
+                {user?.email?.[0].toUpperCase()}
               </div>
-              <div className="flex items-center gap-2">
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors"><Edit2 size={18} /></button>
-                <button className="p-2 text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={18} /></button>
+              <span className="text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors hidden sm:block">
+                Super Admin
+              </span>
+            </button>
+          </div>
+        </header>
+
+        <main className="p-8 flex-1 overflow-y-auto custom-scrollbar">
+          <Routes>
+            <Route index element={<AdminOverview />} />
+            <Route path="dashboard" element={<AdminOverview />} />
+            <Route path="jobs" element={<JobManagement />} />
+            <Route path="tenders" element={<TenderManagement />} />
+            <Route path="announcements" element={<AnnouncementManagement />} />
+            <Route path="companies" element={<CompanyManagement />} />
+            <Route path="categories" element={<CategoryManagement />} />
+            <Route path="settings" element={<WebsiteSettings />} />
+            {/* Placeholder for others */}
+            <Route path="*" element={
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-20">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+                  <HelpCircle size={40} />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800">Module Under Construction</h1>
+                <p className="text-gray-500 max-w-md">This section of the Super Admin system is currently being developed to provide advanced management capabilities.</p>
+                <Link to="/admin/dashboard" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20">Return to Dashboard</Link>
               </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50/50 border-b border-gray-100">
-                  <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Title / Details</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Date</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {loading ? (
-                    [1, 2, 3].map(i => <tr key={i}><td colSpan={4} className="px-6 py-8 text-center text-gray-400">Loading data...</td></tr>)
-                  ) : data.length > 0 ? (
-                    data.map((item: any) => {
-                      const entity = activeTab === 'jobs' ? item.jobs : item;
-                      return (
-                        <tr key={entity.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-blue-600 font-bold shrink-0">
-                                {entity.title?.[0] || 'A'}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-bold text-[#0F172A] truncate">{entity.title}</p>
-                                <p className="text-xs text-gray-500 truncate">{entity.category || 'General'}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold">
-                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Published
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-sm font-medium text-gray-700">{format(new Date(entity.publicationDate || entity.createdAt), 'MMM dd, yyyy')}</p>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
-                              <MoreVertical size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400">No {activeTab} found.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Basic Add Modal Placeholder */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F172A]/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl p-10 space-y-8 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-extrabold tracking-tight">Add New {activeTab.slice(0, -1)}</h2>
-              <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors"><XCircle /></button>
-            </div>
-            
-            <p className="text-gray-500">This is where the form to add a new {activeTab.slice(0, -1)} would go. In a production app, we would use react-hook-form with Zod validation here.</p>
-            
-            <div className="flex gap-4">
-              <button onClick={() => setShowAddModal(false)} className="flex-1 py-4 bg-gray-100 text-[#0F172A] font-bold rounded-2xl hover:bg-gray-200 transition-all">Cancel</button>
-              <button className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all">Save {activeTab.slice(0, -1)}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatsCard({ title, value, icon: Icon, color }: any) {
-  const colors: any = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-emerald-50 text-emerald-600',
-    amber: 'bg-amber-50 text-amber-600',
-  };
-
-  return (
-    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-6">
-      <div className={`w-14 h-14 ${colors[color]} rounded-2xl flex items-center justify-center shrink-0 shadow-sm`}>
-        <Icon size={28} />
-      </div>
-      <div>
-        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">{title}</p>
-        <p className="text-2xl font-black text-[#0F172A]">{value}</p>
+            } />
+          </Routes>
+        </main>
       </div>
     </div>
   );

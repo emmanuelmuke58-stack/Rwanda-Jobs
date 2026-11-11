@@ -2,23 +2,48 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Briefcase, ChevronRight, FileText, Bell, TrendingUp, Building2, GraduationCap, Laptop, Stethoscope, Landmark, Sprout, Hammer, Shield } from 'lucide-react';
 import { format } from 'date-fns';
+import { useSettings } from '../lib/settings.tsx';
+import { JobCardSkeleton, TenderCardSkeleton } from '../components/ui/LoadingSkeletons.tsx';
 
 export default function Home() {
+  const { settings } = useSettings();
   const [latestJobs, setLatestJobs] = useState<any[]>([]);
   const [latestTenders, setLatestTenders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [categories, setCategories] = useState<any[]>([]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [jobsRes, tendersRes] = await Promise.all([
+        const [jobsRes, tendersRes, catsRes] = await Promise.all([
           fetch('/api/jobs?limit=6'),
-          fetch('/api/tenders?limit=4')
+          fetch('/api/tenders?limit=4'),
+          fetch('/api/categories?type=job_category')
         ]);
         const jobsData = await jobsRes.json();
         const tendersData = await tendersRes.json();
-        setLatestJobs(jobsData);
-        setLatestTenders(tendersData);
+        const catsData = await catsRes.json();
+        
+        setLatestJobs(Array.isArray(jobsData) ? jobsData : []);
+        setLatestTenders(Array.isArray(tendersData) ? tendersData : []);
+        // Add icons manually for known categories
+        const iconMap: any = {
+          'Administration': Landmark,
+          'Accounting & Finance': TrendingUp,
+          'Engineering': Hammer,
+          'Information Tech': Laptop,
+          'Healthcare': Stethoscope,
+          'Education': GraduationCap,
+          'Agriculture': Sprout,
+          'Security': Shield
+        };
+        const validCats = Array.isArray(catsData) ? catsData : [];
+        setCategories(validCats.map((c: any) => ({
+          ...c,
+          icon: iconMap[c.name] || Briefcase,
+          count: Math.floor(Math.random() * 50) + 5 // Mock count for now
+        })));
       } catch (error) {
         console.error('Failed to fetch home data:', error);
       } finally {
@@ -27,17 +52,6 @@ export default function Home() {
     };
     fetchData();
   }, []);
-
-  const categories = [
-    { name: 'Administration', icon: Landmark, count: 45 },
-    { name: 'Accounting & Finance', icon: TrendingUp, count: 32 },
-    { name: 'Engineering', icon: Hammer, count: 28 },
-    { name: 'Information Tech', icon: Laptop, count: 56 },
-    { name: 'Healthcare', icon: Stethoscope, count: 19 },
-    { name: 'Education', icon: GraduationCap, count: 24 },
-    { name: 'Agriculture', icon: Sprout, count: 15 },
-    { name: 'Security', icon: Shield, count: 12 },
-  ];
 
   return (
     <div className="space-y-20 pb-20">
@@ -53,12 +67,12 @@ export default function Home() {
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-white">
           <div className="max-w-3xl space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight leading-tight">
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight font-display">
               Discover Job Opportunities <br />
-              <span className="text-[#3B82F6]">Across Rwanda</span>
+              <span style={{ color: settings.primary_color }}>Across Rwanda</span>
             </h1>
-            <p className="text-xl text-gray-300 max-w-2xl leading-relaxed">
-              Find the latest job vacancies, career opportunities, tenders, and public announcements from organizations across Rwanda.
+            <p className="text-lg md:text-xl text-gray-300 max-w-2xl leading-relaxed">
+              {settings.site_description}
             </p>
             
             <div className="bg-white p-2 rounded-2xl shadow-2xl flex flex-col md:flex-row gap-2 max-w-4xl">
@@ -110,7 +124,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {latestJobs.length > 0 ? (
             latestJobs.map((item) => (
-              <JobCard key={item.jobs.id} job={item.jobs} company={item.companies} />
+              <JobCard key={item.job.id} job={item.job} company={item.company} category={item.category} location={item.location_name} type={item.type_name} />
             ))
           ) : (
             // Mock empty state for initial build
@@ -131,7 +145,7 @@ export default function Home() {
             {categories.map((cat) => (
               <Link 
                 key={cat.name} 
-                to={`/find-jobs?category=${cat.name}`}
+                to={`/find-jobs?categoryId=${cat.id}`}
                 className="group p-8 rounded-2xl border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-[#2563EB] hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 text-center"
               >
                 <div className="inline-flex p-4 rounded-xl bg-white text-[#2563EB] group-hover:bg-[#2563EB] group-hover:text-white transition-colors mb-6 shadow-sm">
@@ -191,7 +205,7 @@ export default function Home() {
   );
 }
 
-function JobCard({ job, company }: any) {
+function JobCard({ job, company, category, location, type }: any) {
   return (
     <Link to={`/jobs/${job.id}`} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group flex flex-col h-full">
       <div className="flex justify-between items-start mb-6">
@@ -203,7 +217,7 @@ function JobCard({ job, company }: any) {
           )}
         </div>
         <span className="text-xs font-semibold px-3 py-1 bg-blue-50 text-blue-600 rounded-full">
-          {job.employmentType}
+          {type}
         </span>
       </div>
       
@@ -216,11 +230,11 @@ function JobCard({ job, company }: any) {
         <div className="flex items-center gap-6 text-xs text-gray-500">
           <div className="flex items-center gap-1.5">
             <MapPin size={14} className="text-gray-400" />
-            {job.location}
+            {location}
           </div>
           <div className="flex items-center gap-1.5">
-            <GraduationCap size={14} className="text-gray-400" />
-            {job.educationLevel}
+            <Briefcase size={14} className="text-gray-400" />
+            {category.name}
           </div>
         </div>
         
@@ -266,37 +280,3 @@ function TenderCard({ tender, dark = false }: any) {
   );
 }
 
-// Skeletons
-function JobCardSkeleton() {
-  return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm animate-pulse">
-      <div className="flex justify-between items-start mb-6">
-        <div className="w-14 h-14 bg-gray-100 rounded-xl" />
-        <div className="w-20 h-6 bg-gray-100 rounded-full" />
-      </div>
-      <div className="h-6 bg-gray-100 rounded w-3/4 mb-2" />
-      <div className="h-4 bg-gray-100 rounded w-1/2 mb-6" />
-      <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
-        <div className="h-4 bg-gray-100 rounded w-24" />
-        <div className="h-4 bg-gray-100 rounded w-20" />
-      </div>
-    </div>
-  );
-}
-
-function TenderCardSkeleton() {
-  return (
-    <div className="p-6 rounded-2xl border bg-white/5 border-white/10 animate-pulse">
-      <div className="flex justify-between items-start mb-4">
-        <div className="w-20 h-4 bg-white/10 rounded" />
-        <div className="w-16 h-4 bg-white/10 rounded" />
-      </div>
-      <div className="h-6 bg-white/10 rounded w-3/4 mb-2" />
-      <div className="h-4 bg-white/10 rounded w-1/2 mb-6" />
-      <div className="pt-4 border-t border-white/5 flex justify-between items-center">
-        <div className="w-24 h-4 bg-white/10 rounded" />
-        <div className="w-20 h-4 bg-white/10 rounded" />
-      </div>
-    </div>
-  );
-}

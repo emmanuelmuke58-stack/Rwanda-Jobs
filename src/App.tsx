@@ -19,6 +19,8 @@ import Companies from './pages/Companies.tsx';
 import Navbar from './components/layout/Navbar.tsx';
 import Footer from './components/layout/Footer.tsx';
 
+import { SettingsProvider } from './lib/settings.tsx';
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -27,6 +29,44 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
 
 export const useAuth = () => useContext(AuthContext);
+
+function AppContent() {
+  const { user, loading } = useAuth();
+  const location = window.location.pathname;
+  const isAdminPath = location.startsWith('/admin');
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#F9FAFB] text-[#111827] font-body selection:bg-blue-100">
+      {!isAdminPath && <Navbar />}
+      <main className="flex-grow">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/find-jobs" element={<FindJobs />} />
+          <Route path="/jobs/:id" element={<JobDetails />} />
+          <Route path="/tenders" element={<Tenders />} />
+          <Route path="/announcements" element={<Announcements />} />
+          <Route path="/companies" element={<Companies />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route 
+            path="/admin/*" 
+            element={
+              loading ? (
+                <div className="flex items-center justify-center h-[60vh] text-gray-400 font-medium">Loading platform...</div>
+              ) : user ? (
+                <AdminDashboard />
+              ) : (
+                <Navigate to="/admin/login" />
+              )
+            } 
+          />
+        </Routes>
+      </main>
+      {!isAdminPath && <Footer />}
+    </div>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -42,37 +82,11 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
-      <BrowserRouter>
-        <div className="min-h-screen flex flex-col bg-[#F9FAFB] text-[#111827] font-inter">
-          <Navbar />
-          <main className="flex-grow">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/find-jobs" element={<FindJobs />} />
-              <Route path="/jobs/:id" element={<JobDetails />} />
-              <Route path="/tenders" element={<Tenders />} />
-              <Route path="/announcements" element={<Announcements />} />
-              <Route path="/companies" element={<Companies />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route 
-                path="/admin/*" 
-                element={
-                  loading ? (
-                    <div className="flex items-center justify-center h-96">Loading...</div>
-                  ) : user ? (
-                    <AdminDashboard />
-                  ) : (
-                    <Navigate to="/admin/login" />
-                  )
-                } 
-              />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </BrowserRouter>
+      <SettingsProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </SettingsProvider>
     </AuthContext.Provider>
   );
 }

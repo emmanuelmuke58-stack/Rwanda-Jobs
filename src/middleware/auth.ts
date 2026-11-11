@@ -27,16 +27,52 @@ export const requireAuth = async (
   }
 };
 
+import { db } from '../db/index.ts';
+import { users } from '../db/schema.ts';
+import { eq, count } from 'drizzle-orm';
+
 export const requireAdmin = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
   await requireAuth(req, res, async () => {
-    // In a real app, we'd check the DB for the user's role.
-    // For now, we'll allow any authenticated user to be an admin if they are the first one,
-    // or if we have a list of admin emails.
-    // The user's email is available in req.user.email.
-    next();
+    try {
+      const email = req.user?.email;
+      const uid = req.user?.uid;
+      if (!email || !uid) return res.status(401).json({ error: 'Unauthorized: Missing user info' });
+
+      // Find user in DB
+      let userRecord = await db.select().from(users).where(eq(users.uid, uid));
+      
+      // If user doesn't exist, create them as Super Admin (first user) or wait for manual assignment
+      if (userRecord.length === 0) {
+        const results = await db.select({ count: count() }).from(users);
+        const isFirst = results[0].count === 0;
+        
+        const [newUser] = await db.insert(users).values({
+          uid,
+          email,
+          role: isFirst ? 'superadmin' : 'viewer', // First user is superadmin
+        }).returning();
+        userRecord = [newUser];
+      }
+
+      const user = userRecord[0];
+      if (!user.isActive) return res.status(403).json({ error: 'Account deactivated' });
+
+      // Add db user info to request
+      (req as any).dbUser = user;
+
+      // Access control: only superadmin, manager, and editor can access admin routes
+      if (['superadmin', 'manager', 'editor'].includes(user.role || '')) {
+        next();
+      } else {
+        res.status(403).json({ error: 'Insufficient permissions' });
+      }
+    } catch (err) {
+      console.error('Role check failed:', err);
+      res.status(500).json({ error: 'Authentication service error' });
+    }
   });
 };

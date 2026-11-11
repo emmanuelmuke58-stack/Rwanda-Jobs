@@ -26,7 +26,7 @@ export default function JobDetails() {
   if (loading) return <div className="max-w-7xl mx-auto px-4 py-20 text-center">Loading job details...</div>;
   if (!data) return <div className="max-w-7xl mx-auto px-4 py-20 text-center">Job not found.</div>;
 
-  const { jobs: job, companies: company } = data;
+  const { job, company, category, location, type, level } = data;
 
   const shareOnWhatsApp = () => {
     const url = window.location.href;
@@ -52,11 +52,11 @@ export default function JobDetails() {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
-                  {job.employmentType}
+                  {type}
                 </span>
                 <span className="text-gray-400 text-sm">Posted {format(new Date(job.publicationDate), 'MMMM dd, yyyy')}</span>
               </div>
-              <h1 className="text-4xl font-extrabold tracking-tight">{job.title}</h1>
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight font-display">{job.title}</h1>
               <div className="flex flex-wrap items-center gap-6 text-gray-300">
                 <div className="flex items-center gap-2">
                   <Building2 size={20} className="text-blue-500" />
@@ -64,7 +64,7 @@ export default function JobDetails() {
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin size={20} className="text-blue-500" />
-                  <span>{job.location}</span>
+                  <span>{location}</span>
                 </div>
               </div>
             </div>
@@ -92,7 +92,7 @@ export default function JobDetails() {
                 <FileText className="text-blue-600" size={24} />
                 Job Description
               </h2>
-              <div className="prose prose-blue max-w-none text-gray-600">
+              <div className="prose prose-blue max-w-none text-gray-600 whitespace-pre-line">
                 {job.description}
               </div>
 
@@ -166,7 +166,7 @@ export default function JobDetails() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Education Level</p>
-                    <p className="text-sm font-semibold">{job.educationLevel}</p>
+                    <p className="text-sm font-semibold">{level}</p>
                   </div>
                 </div>
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, Search, ChevronRight, Calendar, ExternalLink, Megaphone } from 'lucide-react';
 import { format } from 'date-fns';
+import { AnnouncementCardSkeleton } from '../components/ui/LoadingSkeletons.tsx';
 
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -11,7 +12,7 @@ export default function Announcements() {
       try {
         const res = await fetch('/api/announcements');
         const data = await res.json();
-        setAnnouncements(data);
+        setAnnouncements(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Failed to fetch announcements:', error);
       } finally {
@@ -37,7 +38,7 @@ export default function Announcements() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12">
         <div className="space-y-6">
           {loading ? (
-            [1, 2, 3].map(i => <div key={i} className="h-40 bg-white rounded-3xl animate-pulse shadow-sm" />)
+            [1, 2, 3].map(i => <AnnouncementCardSkeleton key={i} />)
           ) : announcements.length > 0 ? (
             announcements.map((item) => (
               <div key={item.id} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
@@ -45,7 +46,7 @@ export default function Announcements() {
                   <div className="space-y-3 flex-1">
                     <div className="flex items-center gap-3">
                       <span className="px-3 py-1 bg-amber-50 text-amber-600 text-xs font-bold rounded-full border border-amber-100">
-                        {item.category}
+                        Notice
                       </span>
                       <span className="text-xs text-gray-400 flex items-center gap-1.5">
                         <Calendar size={14} />
